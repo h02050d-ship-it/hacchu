@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>発注デスク｜林材木店</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232f6f4f'/%3E%3Ctext x='50' y='72' font-size='60' text-anchor='middle' fill='%23fff' font-family='sans-serif' font-weight='bold'%3E発%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f4f6f5; --card:#fff; --ink:#1c2b24; --sub:#5f6f67; --line:#dbe3df;
+  --brand:#2f6f4f; --brand2:#25573e; --accent:#e8f2ec; --danger:#c0392b;
+  --warn:#a56a00; --info:#2563a8; --ok:#2f6f4f; --shadow:0 2px 10px rgba(20,40,30,.08);
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic UI",Meiryo,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;}
+a{color:var(--info);}
+header{background:var(--brand);color:#fff;padding:10px 18px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:20;box-shadow:var(--shadow);}
+header h1{font-size:17px;margin:0;letter-spacing:2px;}
+header .sp{flex:1;}
+#srcBadge{font-size:11.5px;background:rgba(255,255,255,.16);border-radius:20px;padding:3px 11px;cursor:pointer;white-space:nowrap;}
+#srcBadge.err{background:#7a2d22;}
+.links{font-size:12px;display:flex;gap:10px;}
+.links a{color:#d8ecdf;text-decoration:none;}
+nav{display:flex;gap:6px;padding:10px 18px 0;max-width:1080px;margin:0 auto;}
+nav button{border:1px solid var(--line);background:#fff;border-radius:10px 10px 0 0;padding:9px 22px;font-size:14.5px;cursor:pointer;color:var(--sub);border-bottom:none;}
+nav button.on{background:var(--card);color:var(--brand);font-weight:bold;border-color:var(--brand);border-bottom:2px solid #fff;margin-bottom:-1px;}
+main{max-width:1080px;margin:0 auto;padding:0 18px 60px;}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:0 12px 12px 12px;padding:18px;box-shadow:var(--shadow);}
+h2{font-size:15px;margin:0 0 10px;color:var(--brand2);}
+/* 発注先タブ */
+.vtabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+.vtab{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:10px 16px;cursor:pointer;font-size:14.5px;text-align:left;min-width:150px;}
+.vtab .m{font-size:11px;color:var(--sub);margin-top:2px;}
+.vtab.on{border-color:var(--brand);background:var(--accent);font-weight:bold;}
+.vtab .tag{font-size:10.5px;border-radius:4px;padding:1px 6px;color:#fff;margin-left:6px;vertical-align:1px;}
+.tag.mail{background:var(--info);} .tag.fax{background:var(--warn);}
+/* 品目 */
+table.items{width:100%;border-collapse:collapse;margin-bottom:12px;}
+table.items th{font-size:12px;color:var(--sub);text-align:left;padding:6px 8px;border-bottom:1.5px solid var(--line);}
+table.items td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle;}
+table.items tr.sel{background:var(--accent);}
+table.items .nm{font-weight:bold;}
+table.items .spec{font-size:12px;color:var(--sub);}
+table.items .last{font-size:11.5px;color:var(--sub);white-space:nowrap;}
+input[type=number].qty{width:88px;padding:8px;font-size:16px;border:1.5px solid var(--line);border-radius:8px;text-align:right;}
+input[type=checkbox].ck{width:20px;height:20px;accent-color:var(--brand);cursor:pointer;}
+.rownote{width:100%;padding:6px 8px;font-size:12.5px;border:1px solid var(--line);border-radius:6px;color:var(--ink);}
+/* 下段 */
+.formrow{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;}
+.formrow>div{flex:1;min-width:260px;}
+label.fl{display:block;font-size:12px;color:var(--sub);margin-bottom:4px;}
+input.tx,textarea.tx{width:100%;padding:9px;font-size:14px;border:1.5px solid var(--line);border-radius:8px;font-family:inherit;}
+textarea.tx{min-height:120px;line-height:1.7;}
+.btn{border:none;border-radius:10px;padding:12px 26px;font-size:15px;cursor:pointer;font-weight:bold;}
+.btn.pri{background:var(--brand);color:#fff;}
+.btn.pri:disabled{background:#9db8aa;cursor:default;}
+.btn.gh{background:#fff;border:1.5px solid var(--line);color:var(--sub);}
+.btn.sm{padding:7px 14px;font-size:13px;font-weight:normal;}
+.actions{display:flex;gap:10px;align-items:center;margin-top:6px;}
+.methodSel{display:flex;gap:6px;}
+.methodSel button{border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13.5px;}
+.methodSel button.on{border-color:var(--brand);background:var(--accent);font-weight:bold;}
+/* 履歴 */
+table.hist{width:100%;border-collapse:collapse;font-size:13.5px;}
+table.hist th{font-size:12px;color:var(--sub);text-align:left;padding:6px 8px;border-bottom:1.5px solid var(--line);white-space:nowrap;}
+table.hist td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;}
+.st{border-radius:12px;padding:2px 10px;font-size:11.5px;color:#fff;white-space:nowrap;cursor:pointer;border:none;}
+.st.s1{background:var(--warn);} .st.s2{background:var(--info);} .st.s3{background:var(--ok);}
+.empty{text-align:center;color:var(--sub);padding:44px 0;}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--brand);border-radius:50%;margin:0 auto 12px;animation:sp 1s linear infinite;}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* モーダル */
+.ovl{position:fixed;inset:0;background:rgba(15,25,20,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
+.ovl.show{display:flex;}
+.dlg{background:#fff;border-radius:14px;max-width:640px;width:100%;max-height:88vh;overflow:auto;padding:22px;}
+.dlg h3{margin:0 0 12px;font-size:16px;color:var(--brand2);}
+.confbox{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:14px;line-height:1.9;}
+.confbox b.to{font-size:15.5px;}
+.confbox .itline{padding-left:1em;}
+pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;font-family:inherit;max-height:220px;overflow:auto;}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#233;color:#fff;padding:11px 22px;border-radius:24px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw;}
+#toast.show{opacity:1;transform:translateX(-50%);}
+/* ゲート */
+#gate{position:fixed;inset:0;background:var(--bg);display:none;align-items:center;justify-content:center;z-index:90;}
+.gatebox{background:#fff;border:1px solid var(--line);border-radius:16px;padding:30px;width:330px;box-shadow:var(--shadow);}
+.gatebox h2{text-align:center;margin-bottom:18px;}
+.gatebox input{width:100%;padding:11px;font-size:15px;border:1.5px solid var(--line);border-radius:8px;margin-bottom:10px;}
+.gatebox .err{color:var(--danger);font-size:12.5px;min-height:18px;}
+@media(max-width:640px){
+  main,nav{padding-left:10px;padding-right:10px;}
+  .panel{padding:12px;}
+  table.items .last{display:none;}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>📦 発注デスク</h1>
+  <div class="sp"></div>
+  <div class="links"><a id="folderLink" target="_blank" style="display:none">📁発注書</a><a id="sheetLink" target="_blank" style="display:none">📊DB</a></div>
+  <div id="srcBadge">● 読込中…</div>
+</header>
+
+<nav>
+  <button id="tabOrder" class="on" onclick="showTab('order')">発注する</button>
+  <button id="tabHist" onclick="showTab('hist')">発注履歴 <span id="histBadge"></span></button>
+  <button id="tabSet" onclick="showTab('set')">発注先・品目の管理</button>
+</nav>
+
+<main>
+  <!-- 発注 -->
+  <section id="pgOrder" class="panel">
+    <h2>1. 発注先を選ぶ</h2>
+    <div class="vtabs" id="vtabs"></div>
+    <div id="orderBody"><div class="empty"><div class="spin"></div>読み込み中…</div></div>
+  </section>
+
+  <!-- 履歴 -->
+  <section id="pgHist" class="panel" style="display:none">
+    <h2>発注履歴（クリックでステータス変更）</h2>
+    <div style="overflow-x:auto"><table class="hist"><thead>
+      <tr><th>発注番号</th><th>日付</th><th>発注先</th><th>内容</th><th>方法</th><th>状態</th><th>納期</th><th>発注書</th></tr>
+    </thead><tbody id="histRows"></tbody></table></div>
+    <div id="histEmpty" class="empty" style="display:none">まだ発注履歴がありません</div>
+  </section>
+
+  <!-- 管理 -->
+  <section id="pgSet" class="panel" style="display:none">
+    <h2>発注先</h2>
+    <div style="overflow-x:auto"><table class="hist"><thead>
+      <tr><th>発注先</th><th>担当</th><th>既定の方法</th><th>メール</th><th>FAX</th><th>メモ</th><th></th></tr>
+    </thead><tbody id="setVendors"></tbody></table></div>
+    <button class="btn gh sm" style="margin:10px 0 24px" onclick="editVendor(null)">＋ 発注先を追加</button>
+    <h2>定番品</h2>
+    <div style="overflow-x:auto"><table class="hist"><thead>
+      <tr><th>発注先</th><th>品名</th><th>規格</th><th>いつもの数量</th><th>備考</th><th></th></tr>
+    </thead><tbody id="setItems"></tbody></table></div>
+    <button class="btn gh sm" style="margin-top:10px" onclick="editItem(null)">＋ 定番品を追加</button>
+  </section>
+</main>
+
+<!-- 送信確認 -->
+<div class="ovl" id="confOvl">
+  <div class="dlg">
+    <h3>この内容で発注します。よろしいですか？</h3>
+    <div class="confbox" id="confBox"></div>
+    <details style="margin-bottom:14px"><summary style="cursor:pointer;font-size:13px;color:var(--sub)">送信文面を確認する</summary>
+      <pre class="bodyprev" id="confBody"></pre></details>
+    <div class="actions">
+      <button class="btn pri" id="confSend" onclick="doSend()">送信する</button>
+      <button class="btn gh" onclick="$('confOvl').classList.remove('show')">やめる</button>
+    </div>
+  </div>
+</div>
+
+<!-- 発注先編集 -->
+<div class="ovl" id="vOvl"><div class="dlg">
+  <h3 id="vTitle">発注先の編集</h3>
+  <input type="hidden" id="v_id">
+  <label class="fl">発注先名 *</label><input class="tx" id="v_name" style="margin-bottom:8px">
+  <label class="fl">担当者（様は不要）</label><input class="tx" id="v_contact" style="margin-bottom:8px">
+  <label class="fl">既定の送信方法</label>
+  <div class="methodSel" style="margin-bottom:8px"><button id="vm_mail" onclick="vMeth='mail';vMethUi()">📧 メール</button><button id="vm_fax" onclick="vMeth='fax';vMethUi()">📠 FAX</button></div>
+  <label class="fl">メールアドレス</label><input class="tx" id="v_email" style="margin-bottom:8px">
+  <label class="fl">FAX番号</label><input class="tx" id="v_fax" style="margin-bottom:8px">
+  <label class="fl">結びの文（メール本文の末尾）</label><textarea class="tx" id="v_closing" style="min-height:64px;margin-bottom:8px"></textarea>
+  <label class="fl">メモ（最低ロット等）</label><input class="tx" id="v_note" style="margin-bottom:14px">
+  <div class="actions">
+    <button class="btn pri" onclick="saveVendor()">保存</button>
+    <button class="btn gh" onclick="$('vOvl').classList.remove('show')">やめる</button>
+    <div style="flex:1"></div>
+    <button class="btn gh sm" id="v_del" style="color:var(--danger)" onclick="delVendor()">削除</button>
+  </div>
+</div></div>
+
+<!-- 品目編集 -->
+<div class="ovl" id="iOvl"><div class="dlg">
+  <h3 id="iTitle">定番品の編集</h3>
+  <input type="hidden" id="i_id">
+  <label class="fl">発注先 *</label><select class="tx" id="i_vendor" style="margin-bottom:8px"></select>
+  <label class="fl">品名 *</label><input class="tx" id="i_name" style="margin-bottom:8px">
+  <label class="fl">規格・サイズ</label><input class="tx" id="i_spec" style="margin-bottom:8px">
+  <div class="formrow">
+    <div><label class="fl">単位（枚・箱・袋…）</label><input class="tx" id="i_unit"></div>
+    <div><label class="fl">いつもの数量</label><input class="tx" id="i_defQty" type="number"></div>
+  </div>
+  <label class="fl">備考（色指定・最低ロット等＝発注書に載る）</label><input class="tx" id="i_note" style="margin-bottom:14px">
+  <div class="actions">
+    <button class="btn pri" onclick="saveItem()">保存</button>
+    <button class="btn gh" onclick="$('iOvl').classList.remove('show')">やめる</button>
+    <div style="flex:1"></div>
+    <button class="btn gh sm" id="i_del" style="color:var(--danger)" onclick="delItem()">削除</button>
+  </div>
+</div></div>
+
+<!-- ログイン -->
+<div id="gate"><div class="gatebox">
+  <h2>📦 発注デスク</h2>
+  <input id="gateMail" type="email" placeholder="メールアドレス" autocomplete="username">
+  <input id="gatePass" type="password" placeholder="パスワード" autocomplete="current-password">
+  <div class="err" id="gateErr"></div>
+  <button class="btn pri" style="width:100%" onclick="submitGate()">ログイン</button>
+</div></div>
+
+<div id="toast"></div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbxQCf2HVfLjUAzOYXJHzzhquN3zkNrUAgcusg3mH5uhlm-UySsDYXBChhLjZGI2DyecIg/exec';
+const CRED_KEY = 'hacchu_cred';
+const CACHE_KEY = 'hacchu_cache_v1';
+const DRAFT_KEY = 'hacchu_draft_v1';
+
+/* ===== 資格情報（共通SSO: h02050d-ship-it.github.io の他ツールのログインを引き継ぐ）===== */
+const SSO_KEY="hayazai_sso_cred";
+const SSO_PEERS=["hayazai_board_cred","hayazai_seiso_cred","hayazai_rulebook_cred","hayazai_kaizen_cred","notify_creds_v1","seinodesk_cred","faxdesk_cred","orderdesk_cred","nippou_cred"];
+function ssoFind_(){
+  const keys=[SSO_KEY].concat(SSO_PEERS);
+  for(const k of keys){
+    try{ const v=JSON.parse(localStorage.getItem(k)||"null");
+      if(v){ const email=v.email||v.e, pass=v.pass||v.p; if(email&&pass) return {email:String(email),pass:String(pass)}; }
+    }catch(e){}
+  }
+  return null;
+}
+function ssoWrite(email,pass){ try{ localStorage.setItem(SSO_KEY,JSON.stringify({email,pass})); }catch(e){} }
+function ssoClear(){ try{ localStorage.removeItem(SSO_KEY); }catch(e){} }
+function creds(){
+  try{ const v=JSON.parse(localStorage.getItem(CRED_KEY)||"null"); if(v&&v.email&&v.pass) return v; }catch(e){}
+  const s=ssoFind_(); if(s){ try{ localStorage.setItem(CRED_KEY,JSON.stringify(s)); }catch(e){} return s; }
+  return {};
+}
+function saveCreds(email,pass){ try{ localStorage.setItem(CRED_KEY,JSON.stringify({email,pass})); }catch(e){} ssoWrite(email,pass); }
+function clearCreds(){ try{ localStorage.removeItem(CRED_KEY); localStorage.removeItem(CACHE_KEY); }catch(e){} ssoClear(); }
+
+/* ===== util ===== */
+const $=id=>document.getElementById(id);
+function esc(s){ return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+let toastTimer=null;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("show"),3200); }
+function fmtD(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return (d.getMonth()+1)+"/"+d.getDate(); }
+function fmtYMD(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return String(iso).slice(0,10); return d.getFullYear()+"/"+(d.getMonth()+1)+"/"+d.getDate(); }
+function daysAgo(iso){ const d=new Date(iso); if(isNaN(d)) return ""; const n=Math.floor((Date.now()-d.getTime())/86400000); return n<=0?"今日":n+"日前"; }
+
+/* ===== state ===== */
+let VENDORS=[], ITEMS=[], ORDERS=[], CURV=null, CURMETH='mail';
+let DRAFT={};  // vendorId -> {sel:{itemId:{on,qty,note}}, note}
+try{ DRAFT=JSON.parse(localStorage.getItem(DRAFT_KEY)||"{}")||{}; }catch(e){ DRAFT={}; }
+function saveDraft(){ try{ localStorage.setItem(DRAFT_KEY,JSON.stringify(DRAFT)); }catch(e){} }
+
+/* ===== 起動 ===== */
+function boot(){
+  const c=creds();
+  if(c.email&&c.pass){
+    $("gate").style.display="none";
+    try{ const ca=JSON.parse(localStorage.getItem(CACHE_KEY)||"null"); if(ca){ VENDORS=ca.vendors||[]; ITEMS=ca.items||[]; ORDERS=ca.orders||[]; renderAll(); } }catch(e){}
+    fetchAll();
+  } else { $("gate").style.display="flex"; setTimeout(()=>$("gateMail").focus(),60); }
+}
+["gateMail","gatePass"].forEach(id=>{ document.addEventListener("DOMContentLoaded",()=>{ $(id).addEventListener("keydown",e=>{ if(e.key==="Enter") submitGate(); }); }); });
+function submitGate(){
+  const email=$("gateMail").value.trim(), pass=$("gatePass").value;
+  if(!email||!pass) return;
+  saveCreds(email,pass);
+  $("gate").style.display="none";
+  fetchAll();
+}
+document.addEventListener("DOMContentLoaded",()=>{ $("srcBadge").onclick=()=>{ if(confirm("ログアウトしますか？")){ clearCreds(); location.reload(); } }; boot(); });
+
+function setBadge(state){ const b=$("srcBadge"); if(state==="live"){ b.className=""; b.textContent="● ライブ"; } else if(state==="load"){ b.className=""; b.textContent="● 読込中…"; } else { b.className="err"; b.textContent="● オフライン"; } }
+
+async function api(qs){
+  const c=creds();
+  const u=API+"?action="+qs+"&email="+encodeURIComponent(c.email||"")+"&pass="+encodeURIComponent(c.pass||"");
+  const r=await fetch(u); const t=await r.text();
+  if(!t||t.trim()[0]!=="{") throw new Error("bad response");
+  return JSON.parse(t);
+}
+async function post(payload){
+  const c=creds();
+  const r=await fetch(API,{method:"POST",body:JSON.stringify({...payload,email:c.email,pass:c.pass})});
+  const t=await r.text();
+  if(!t||t.trim()[0]!=="{") throw new Error("bad response");
+  return JSON.parse(t);
+}
+async function fetchAll(){
+  setBadge("load");
+  let j=null;
+  for(let i=0;i<3&&!j;i++){ try{ j=await api("orderdata"); }catch(e){ j=null; } }
+  if(!j){ setBadge("err"); toast("読み込みに失敗しました"); return; }
+  if(!j.ok){ if(j.error==="unauthorized"){ clearCreds(); $("gate").style.display="flex"; $("gateErr").textContent="メールまたはパスワードが違います"; } else toast("エラー: "+(j.error||"不明")); setBadge("err"); return; }
+  VENDORS=(j.vendors||[]).sort((a,b)=>(+a.sort||99)-(+b.sort||99));
+  ITEMS=(j.items||[]).sort((a,b)=>(+a.sort||99)-(+b.sort||99));
+  ORDERS=j.orders||[];
+  if(j.folderUrl){ $("folderLink").href=j.folderUrl; $("folderLink").style.display=""; }
+  if(j.sheetUrl){ $("sheetLink").href=j.sheetUrl; $("sheetLink").style.display=""; }
+  try{ localStorage.setItem(CACHE_KEY,JSON.stringify({vendors:VENDORS,items:ITEMS,orders:ORDERS})); }catch(e){}
+  setBadge("live"); renderAll();
+}
+
+/* ===== 描画 ===== */
+function renderAll(){ renderVtabs(); renderOrder(); renderHist(); renderSet(); }
+function showTab(t){
+  $("tabOrder").className=t==="order"?"on":""; $("tabHist").className=t==="hist"?"on":""; $("tabSet").className=t==="set"?"on":"";
+  $("pgOrder").style.display=t==="order"?"":"none";
+  $("pgHist").style.display=t==="hist"?"":"none";
+  $("pgSet").style.display=t==="set"?"":"none";
+}
+
+function renderVtabs(){
+  const el=$("vtabs");
+  if(!VENDORS.length){ el.innerHTML=""; return; }
+  if(!CURV || !VENDORS.some(v=>v.id===CURV)) CURV=VENDORS[0].id;
+  el.innerHTML=VENDORS.map(v=>{
+    const last=ORDERS.find(o=>o.vendorId===v.id);
+    return `<button class="vtab ${v.id===CURV?'on':''}" onclick="selVendor('${esc(v.id)}')">${esc(v.name)}
+      <span class="tag ${v.method==='fax'?'fax':'mail'}">${v.method==='fax'?'FAX':'メール'}</span>
+      <div class="m">${last?('前回 '+fmtYMD(last.date)+'（'+daysAgo(last.date)+'）'):'発注実績なし'}</div></button>`;
+  }).join("");
+}
+function selVendor(id){ CURV=id; const v=VENDORS.find(x=>x.id===id); CURMETH=(v&&v.method)||'mail'; renderVtabs(); renderOrder(); }
+
+function lastQty(itemId){
+  // 履歴のitemsテキストから同品目の前回数量は取れないので、発注履歴の有無だけ見る（数量はdefQty）
+  return null;
+}
+function draftOf(vid){ if(!DRAFT[vid]) DRAFT[vid]={sel:{},note:""}; return DRAFT[vid]; }
+
+function renderOrder(){
+  const v=VENDORS.find(x=>x.id===CURV);
+  const el=$("orderBody");
+  if(!v){ el.innerHTML='<div class="empty">発注先がありません。「発注先・品目の管理」から追加してください。</div>'; return; }
+  if(CURMETH!=='mail'&&CURMETH!=='fax') CURMETH=v.method||'mail';
+  const items=ITEMS.filter(i=>i.vendorId===v.id);
+  const d=draftOf(v.id);
+  const rows=items.map(it=>{
+    const s=d.sel[it.id]||{};
+    return `<tr class="${s.on?'sel':''}">
+      <td><input type="checkbox" class="ck" ${s.on?'checked':''} onchange="tglItem('${esc(it.id)}',this.checked)"></td>
+      <td><span class="nm">${esc(it.name)}</span><br><span class="spec">${esc(it.spec||'')}</span></td>
+      <td><input type="number" class="qty" value="${esc(s.qty??it.defQty??'')}" min="0" onchange="setQty('${esc(it.id)}',this.value)" onfocus="autoOn('${esc(it.id)}')"> ${esc(it.unit||'')}</td>
+      <td><input class="rownote" placeholder="備考（色など）" value="${esc(s.note??it.note??'')}" onchange="setNote('${esc(it.id)}',this.value)"></td>
+      <td class="last">${esc(it.note||'')}</td>
+    </tr>`;
+  }).join("");
+  const vLast=ORDERS.filter(o=>o.vendorId===v.id).slice(0,3);
+  const histHtml=vLast.length?('<div style="font-size:12px;color:var(--sub);margin-bottom:10px">直近: '+vLast.map(o=>fmtYMD(o.date)+'『'+esc(o.items)+'』').join('　／　')+'</div>'):'';
+  el.innerHTML=`
+    ${v.note?('<div style="font-size:12.5px;color:var(--warn);margin-bottom:8px">📌 '+esc(v.note)+'</div>'):''}
+    ${histHtml}
+    <h2>2. 品目と数量を選ぶ</h2>
+    <table class="items"><thead><tr><th></th><th>品名・規格</th><th>数量</th><th>この発注の備考</th><th>いつもの備考</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="5" style="color:var(--sub)">定番品が未登録です（管理タブから追加）</td></tr>'}</tbody></table>
+    <h2>3. 送信方法・連絡事項</h2>
+    <div class="formrow">
+      <div style="flex:0 0 auto">
+        <label class="fl">送信方法</label>
+        <div class="methodSel">
+          <button class="${CURMETH==='mail'?'on':''}" onclick="CURMETH='mail';renderOrder()" ${v.email?'':'disabled'}>📧 メール${v.email?'':'(未登録)'}</button>
+          <button class="${CURMETH==='fax'?'on':''}" onclick="CURMETH='fax';renderOrder()" ${v.fax?'':'disabled'}>📠 FAX${v.fax?'':'(未登録)'}</button>
+        </div>
+        <div style="font-size:12px;color:var(--sub);margin-top:5px">${CURMETH==='fax'?('FAX '+esc(v.fax)):esc(v.email)}</div>
+      </div>
+      <div>
+        <label class="fl">連絡事項（発注書・本文に載る／空欄OK）</label>
+        <input class="tx" id="ordNote" value="${esc(d.note||'')}" onchange="draftOf('${esc(v.id)}').note=this.value;saveDraft()">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn pri" onclick="openConf()">発注内容を確認する</button>
+      <span style="font-size:12px;color:var(--sub)">送信前に必ず確認画面が出ます</span>
+    </div>`;
+}
+function tglItem(id,on){ const d=draftOf(CURV); d.sel[id]=d.sel[id]||{}; d.sel[id].on=on; if(on&&(d.sel[id].qty===undefined)){ const it=ITEMS.find(x=>x.id===id); d.sel[id].qty=it?it.defQty:""; } saveDraft(); renderOrder(); }
+function autoOn(id){ const d=draftOf(CURV); if(!(d.sel[id]&&d.sel[id].on)){ tglItem(id,true); } }
+function setQty(id,vq){ const d=draftOf(CURV); d.sel[id]=d.sel[id]||{on:true}; d.sel[id].qty=vq; d.sel[id].on=true; saveDraft(); renderOrder(); }
+function setNote(id,vn){ const d=draftOf(CURV); d.sel[id]=d.sel[id]||{}; d.sel[id].note=vn; saveDraft(); }
+
+/* ===== 文面生成 ===== */
+function pickedItems(){
+  const d=draftOf(CURV);
+  return ITEMS.filter(i=>i.vendorId===CURV && d.sel[i.id] && d.sel[i.id].on).map(i=>{
+    const s=d.sel[i.id];
+    return {id:i.id,name:i.name,spec:i.spec||"",unit:i.unit||"",qty:String(s.qty??i.defQty??""),note:(s.note??i.note??"")};
+  });
+}
+function buildSubject(v,items){
+  const tpl=v.subjectTpl||'【要返信】{品名} 発注の件';
+  const nm=items.length?items[0].name+(items.length>1?' ほか':''):'';
+  return tpl.replace('{品名}',nm);
+}
+function buildBody(v,items,note){
+  const lines=[];
+  lines.push(v.name);
+  if(v.contact) lines.push(v.contact+' 様');
+  lines.push('');
+  lines.push('いつもお世話になっております。');
+  lines.push('');
+  lines.push('下記の通り発注をお願いいたします。');
+  lines.push('');
+  lines.push('■注文内容');
+  items.forEach(it=>{
+    lines.push('・'+it.name+(it.spec?(' '+it.spec):'')+'　'+it.qty+(it.unit||'')+(it.note?('（'+it.note+'）'):''));
+  });
+  if(note){ lines.push(''); lines.push('■連絡事項'); lines.push(note); }
+  lines.push('');
+  lines.push(v.closing||'手配のほどよろしくお願いいたします。');
+  return lines.join('\n');
+}
+
+/* ===== 確認→送信 ===== */
+let PENDING=null;
+function openConf(){
+  const v=VENDORS.find(x=>x.id===CURV); if(!v) return;
+  const items=pickedItems();
+  if(!items.length){ toast("品目にチェックを入れてください"); return; }
+  for(const it of items){ if(!it.qty||+it.qty<=0){ toast("数量が入っていない品目があります: "+it.name); return; } }
+  const note=$("ordNote")?$("ordNote").value.trim():"";
+  const subject=buildSubject(v,items);
+  const body=buildBody(v,items,note);
+  PENDING={vendorId:v.id,method:CURMETH,subject,body,note,items};
+  $("confBox").innerHTML=
+    `<b class="to">${esc(v.name)}</b>${v.contact?('　'+esc(v.contact)+' 様'):''}<br>`+
+    `${CURMETH==='fax'?('📠 FAX '+esc(v.fax)+'（発注書PDFを送信）'):('📧 メール '+esc(v.email))}<br>`+
+    items.map(it=>`<div class="itline">・${esc(it.name)}${it.spec?(' '+esc(it.spec)):''}　<b>${esc(it.qty)}${esc(it.unit)}</b>${it.note?('（'+esc(it.note)+'）'):''}</div>`).join("")+
+    (note?('<div style="margin-top:4px">連絡事項: '+esc(note)+'</div>'):'')+
+    `<div style="margin-top:6px;font-size:12.5px;color:var(--sub)">発注書PDFを自動作成してDriveに保存し、履歴に記録します</div>`;
+  $("confBody").textContent=(CURMETH==='mail'?('件名: '+subject+'\n\n'):'【FAX原稿=発注書PDF】参考文面:\n\n')+body;
+  $("confSend").disabled=false; $("confSend").textContent="送信する";
+  $("confOvl").classList.add("show");
+}
+async function doSend(){
+  if(!PENDING) return;
+  $("confSend").disabled=true; $("confSend").textContent="送信中…";
+  let j=null;
+  try{ j=await post({action:"ordersend",...PENDING}); }catch(e){ j={ok:false,error:String(e)}; }
+  if(!j.ok){ $("confSend").disabled=false; $("confSend").textContent="送信する"; toast("送信失敗: "+(j.error||"不明")); return; }
+  $("confOvl").classList.remove("show");
+  delete DRAFT[PENDING.vendorId]; saveDraft();
+  PENDING=null;
+  toast("✅ 発注しました（"+j.no+"）"+(j.pdfUrl?" 発注書PDF保存済み":""));
+  fetchAll();
+}
+
+/* ===== 履歴 ===== */
+const STATES=['発注済','納期回答済','入荷済み'];
+function stCls(s){ return s==='入荷済み'?'s3':(s==='納期回答済'?'s2':'s1'); }
+function renderHist(){
+  const tb=$("histRows");
+  const open=ORDERS.filter(o=>o.status!=='入荷済み').length;
+  $("histBadge").textContent=open?('('+open+')'):'';
+  if(!ORDERS.length){ tb.innerHTML=""; $("histEmpty").style.display=""; return; }
+  $("histEmpty").style.display="none";
+  tb.innerHTML=ORDERS.map(o=>`<tr>
+    <td style="white-space:nowrap">${esc(o.no)}</td>
+    <td style="white-space:nowrap">${fmtYMD(o.date)}</td>
+    <td>${esc(o.vendor)}</td>
+    <td>${esc(o.items)}</td>
+    <td>${o.method==='fax'?'📠FAX':'📧メール'}</td>
+    <td><button class="st ${stCls(o.status)}" onclick="cycleStatus('${esc(o.id)}')">${esc(o.status||'発注済')}</button></td>
+    <td><input type="date" value="${esc(o.deliveryDate||'')}" style="border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12.5px" onchange="setDelivery('${esc(o.id)}',this.value)"></td>
+    <td>${o.pdfUrl?('<a href="'+esc(o.pdfUrl)+'" target="_blank">📄PDF</a>'):''}</td>
+  </tr>`).join("");
+}
+async function cycleStatus(id){
+  const o=ORDERS.find(x=>x.id===id); if(!o) return;
+  const next=STATES[(STATES.indexOf(o.status||'発注済')+1)%STATES.length];
+  o.status=next; renderHist();
+  try{ const j=await post({action:"orderstatus",id,status:next}); if(!j.ok) toast("保存失敗: "+(j.error||"")); }catch(e){ toast("保存失敗"); }
+}
+async function setDelivery(id,d){
+  const o=ORDERS.find(x=>x.id===id); if(o){ o.deliveryDate=d; if(o.status==='発注済'&&d) o.status='納期回答済'; renderHist(); }
+  try{ const j=await post({action:"orderstatus",id,deliveryDate:d,status:(o?o.status:undefined)}); if(!j.ok) toast("保存失敗: "+(j.error||"")); }catch(e){ toast("保存失敗"); }
+}
+
+/* ===== 管理 ===== */
+let vMeth='mail';
+function vMethUi(){ $("vm_mail").className=vMeth==='mail'?'on':''; $("vm_fax").className=vMeth==='fax'?'on':''; }
+function renderSet(){
+  $("setVendors").innerHTML=VENDORS.map(v=>`<tr>
+    <td><b>${esc(v.name)}</b></td><td>${esc(v.contact||'')}</td>
+    <td>${v.method==='fax'?'📠FAX':'📧メール'}</td>
+    <td>${esc(v.email||'')}</td><td>${esc(v.fax||'')}</td><td style="font-size:12px">${esc(v.note||'')}</td>
+    <td><button class="btn gh sm" onclick="editVendor('${esc(v.id)}')">編集</button></td></tr>`).join("");
+  $("setItems").innerHTML=ITEMS.map(i=>{
+    const v=VENDORS.find(x=>x.id===i.vendorId);
+    return `<tr><td>${esc(v?v.name:i.vendorId)}</td><td><b>${esc(i.name)}</b></td><td>${esc(i.spec||'')}</td>
+    <td>${esc(i.defQty||'')}${esc(i.unit||'')}</td><td style="font-size:12px">${esc(i.note||'')}</td>
+    <td><button class="btn gh sm" onclick="editItem('${esc(i.id)}')">編集</button></td></tr>`;
+  }).join("");
+}
+function editVendor(id){
+  const v=id?VENDORS.find(x=>x.id===id):null;
+  $("vTitle").textContent=v?('発注先の編集: '+v.name):'発注先を追加';
+  $("v_id").value=v?v.id:"";
+  $("v_name").value=v?v.name:""; $("v_contact").value=v?(v.contact||""):"";
+  vMeth=v?(v.method||'mail'):'mail'; vMethUi();
+  $("v_email").value=v?(v.email||""):""; $("v_fax").value=v?(v.fax||""):"";
+  $("v_closing").value=v?(v.closing||""):"手配のほどよろしくお願いいたします。\n納期が分かりましたらご連絡いただけますと幸いです。";
+  $("v_note").value=v?(v.note||""):"";
+  $("v_del").style.display=v?"":"none";
+  $("vOvl").classList.add("show");
+}
+async function saveVendor(){
+  const name=$("v_name").value.trim(); if(!name){ toast("発注先名は必須です"); return; }
+  const b={action:"ordervendor",id:$("v_id").value||undefined,name,contact:$("v_contact").value.trim(),
+    method:vMeth,email:$("v_email").value.trim(),fax:$("v_fax").value.trim(),
+    closing:$("v_closing").value,note:$("v_note").value.trim()};
+  try{ const j=await post(b); if(!j.ok){ toast("保存失敗: "+(j.error||"")); return; } }catch(e){ toast("保存失敗"); return; }
+  $("vOvl").classList.remove("show"); toast("保存しました"); fetchAll();
+}
+async function delVendor(){
+  const id=$("v_id").value; if(!id) return;
+  if(!confirm("この発注先を削除しますか？（定番品は残ります）")) return;
+  try{ const j=await post({action:"ordervendor",id,del:true}); if(!j.ok){ toast("削除失敗: "+(j.error||"")); return; } }catch(e){ toast("削除失敗"); return; }
+  $("vOvl").classList.remove("show"); toast("削除しました"); fetchAll();
+}
+function editItem(id){
+  const i=id?ITEMS.find(x=>x.id===id):null;
+  $("iTitle").textContent=i?('定番品の編集: '+i.name):'定番品を追加';
+  $("i_id").value=i?i.id:"";
+  $("i_vendor").innerHTML=VENDORS.map(v=>`<option value="${esc(v.id)}" ${i&&i.vendorId===v.id?'selected':''}>${esc(v.name)}</option>`).join("");
+  if(!i&&CURV) $("i_vendor").value=CURV;
+  $("i_name").value=i?i.name:""; $("i_spec").value=i?(i.spec||""):"";
+  $("i_unit").value=i?(i.unit||""):""; $("i_defQty").value=i?(i.defQty||""):"";
+  $("i_note").value=i?(i.note||""):"";
+  $("i_del").style.display=i?"":"none";
+  $("iOvl").classList.add("show");
+}
+async function saveItem(){
+  const name=$("i_name").value.trim(); if(!name){ toast("品名は必須です"); return; }
+  const b={action:"orderitem",id:$("i_id").value||undefined,vendorId:$("i_vendor").value,name,
+    spec:$("i_spec").value.trim(),unit:$("i_unit").value.trim(),defQty:$("i_defQty").value,note:$("i_note").value.trim()};
+  try{ const j=await post(b); if(!j.ok){ toast("保存失敗: "+(j.error||"")); return; } }catch(e){ toast("保存失敗"); return; }
+  $("iOvl").classList.remove("show"); toast("保存しました"); fetchAll();
+}
+async function delItem(){
+  const id=$("i_id").value; if(!id) return;
+  if(!confirm("この定番品を削除しますか？")) return;
+  try{ const j=await post({action:"orderitem",id,del:true}); if(!j.ok){ toast("削除失敗: "+(j.error||"")); return; } }catch(e){ toast("削除失敗"); return; }
+  $("iOvl").classList.remove("show"); toast("削除しました"); fetchAll();
+}
+</script>
+</body>
+</html>
