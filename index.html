@@ -144,10 +144,7 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
     </thead><tbody id="setVendors"></tbody></table></div>
     <button class="btn gh sm" style="margin:10px 0 24px" onclick="editVendor(null)">＋ 発注先を追加</button>
     <h2>定番品</h2>
-    <div style="overflow-x:auto"><table class="hist"><thead>
-      <tr><th>発注先</th><th>品名</th><th>規格</th><th>いつもの数量</th><th>単価</th><th>備考</th><th></th></tr>
-    </thead><tbody id="setItems"></tbody></table></div>
-    <button class="btn gh sm" style="margin-top:10px" onclick="editItem(null)">＋ 定番品を追加</button>
+    <div id="setItems"></div>
   </section>
 </main>
 
@@ -523,12 +520,20 @@ function renderSet(){
     <td>${v.method==='fax'?'📠FAX':'📧メール'}</td>
     <td>${esc(v.email||'')}</td><td>${esc(v.fax||'')}</td><td style="font-size:12px">${esc(v.note||'')}</td>
     <td><button class="btn gh sm" onclick="editVendor('${esc(v.id)}')">編集</button></td></tr>`).join("");
-  $("setItems").innerHTML=ITEMS.map(i=>{
-    const v=VENDORS.find(x=>x.id===i.vendorId);
-    return `<tr><td>${esc(v?v.name:i.vendorId)}</td><td><b>${esc(i.name)}</b></td><td>${esc(i.spec||'')}</td>
-    <td>${esc(i.defQty||'')}${esc(i.unit||'')}</td><td class="amt">${(+i.price>0)?('¥'+(+i.price).toLocaleString()):''}</td><td style="font-size:12px">${esc(i.note||'')}</td>
-    <td><button class="btn gh sm" onclick="editItem('${esc(i.id)}')">編集</button></td></tr>`;
-  }).join("");
+  const groups=VENDORS.map(v=>({v,items:ITEMS.filter(i=>i.vendorId===v.id)}));
+  const orphans=ITEMS.filter(i=>!VENDORS.some(v=>v.id===i.vendorId));
+  if(orphans.length) groups.push({v:{id:'',name:'（発注先未設定）'},items:orphans});
+  $("setItems").innerHTML=groups.map(g=>`
+    <div style="margin:0 0 22px">
+      <div style="font-weight:bold;color:var(--brand2);border-left:4px solid var(--brand);padding:2px 0 2px 10px;margin-bottom:6px">${esc(g.v.name)} <span class="intnote">${g.items.length}品</span></div>
+      ${g.items.length?`<div style="overflow-x:auto"><table class="hist"><thead>
+        <tr><th>品名</th><th>規格</th><th>いつもの数量</th><th>単価</th><th>備考（相手に送られます）</th><th></th></tr></thead><tbody>
+        ${g.items.map(i=>`<tr><td><b>${esc(i.name)}</b></td><td>${esc(i.spec||'')}</td>
+          <td>${esc(i.defQty||'')}${esc(i.unit||'')}</td><td class="amt">${(+i.price>0)?('¥'+(+i.price).toLocaleString()):''}</td><td style="font-size:12px">${esc(i.note||'')}</td>
+          <td><button class="btn gh sm" onclick="editItem('${esc(i.id)}')">編集</button></td></tr>`).join('')}
+      </tbody></table></div>`:'<div class="intnote" style="padding:4px 0 4px 14px">定番品なし</div>'}
+      <button class="btn gh sm" style="margin-top:6px" onclick="editItem(null,'${esc(g.v.id)}')">＋ ${esc(g.v.name)}に定番品を追加</button>
+    </div>`).join("");
 }
 function editVendor(id){
   const v=id?VENDORS.find(x=>x.id===id):null;
@@ -556,12 +561,12 @@ async function delVendor(){
   try{ const j=await post({action:"ordervendor",id,del:true}); if(!j.ok){ toast("削除失敗: "+(j.error||"")); return; } }catch(e){ toast("削除失敗"); return; }
   $("vOvl").classList.remove("show"); toast("削除しました"); fetchAll();
 }
-function editItem(id){
+function editItem(id,vid){
   const i=id?ITEMS.find(x=>x.id===id):null;
   $("iTitle").textContent=i?('定番品の編集: '+i.name):'定番品を追加';
   $("i_id").value=i?i.id:"";
   $("i_vendor").innerHTML=VENDORS.map(v=>`<option value="${esc(v.id)}" ${i&&i.vendorId===v.id?'selected':''}>${esc(v.name)}</option>`).join("");
-  if(!i&&CURV) $("i_vendor").value=CURV;
+  if(!i&&(vid||CURV)) $("i_vendor").value=vid||CURV;
   $("i_name").value=i?i.name:""; $("i_spec").value=i?(i.spec||""):"";
   $("i_unit").value=i?(i.unit||""):""; $("i_defQty").value=i?(i.defQty||""):"";
   $("i_price").value=i?(i.price||""):""; $("i_note").value=i?(i.note||""):"";
