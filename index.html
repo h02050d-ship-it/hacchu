@@ -43,6 +43,10 @@ table.items .nm{font-weight:bold;}
 table.items .spec{font-size:12px;color:var(--sub);}
 table.items .last{font-size:11.5px;color:var(--sub);white-space:nowrap;}
 input[type=number].qty{width:88px;padding:8px;font-size:16px;border:1.5px solid var(--line);border-radius:8px;text-align:right;}
+input[type=number].prc{width:90px;padding:8px;font-size:14px;border:1.5px solid var(--line);border-radius:8px;text-align:right;background:#fbfdf9;}
+td.amt{text-align:right;font-weight:bold;white-space:nowrap;}
+tr.totalrow td{border-bottom:none;font-size:15px;padding-top:12px;}
+.intnote{font-size:11px;color:var(--sub);}
 input[type=checkbox].ck{width:20px;height:20px;accent-color:var(--brand);cursor:pointer;}
 .rownote{width:100%;padding:6px 8px;font-size:12.5px;border:1px solid var(--line);border-radius:6px;color:var(--ink);}
 /* 下段 */
@@ -77,7 +81,15 @@ table.hist td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top
 .confbox{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:14px;line-height:1.9;}
 .confbox b.to{font-size:15.5px;}
 .confbox .itline{padding-left:1em;}
-pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;font-family:inherit;max-height:220px;overflow:auto;}
+pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;font-family:inherit;max-height:300px;overflow:auto;margin:0 0 12px;}
+.prevlabel{font-size:12px;color:var(--sub);margin:0 0 4px;}
+.faxprev{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fff;font-size:12.5px;max-height:300px;overflow:auto;margin-bottom:12px;}
+.faxprev h4{text-align:center;letter-spacing:8px;margin:0 0 8px;border-bottom:3px double #333;padding-bottom:6px;font-size:15px;}
+.faxprev table{width:100%;border-collapse:collapse;margin:8px 0;}
+.faxprev th{background:#eef2f6;border:1px solid #888;padding:4px 6px;font-size:11.5px;}
+.faxprev td{border:1px solid #888;padding:5px 6px;}
+.costline{background:var(--accent);border-radius:8px;padding:9px 13px;font-size:14px;margin-bottom:12px;}
+@media(max-width:640px){ .panel{padding:12px;} }
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#233;color:#fff;padding:11px 22px;border-radius:24px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw;}
 #toast.show{opacity:1;transform:translateX(-50%);}
 /* ゲート */
@@ -119,7 +131,7 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
   <section id="pgHist" class="panel" style="display:none">
     <h2>発注履歴（クリックでステータス変更）</h2>
     <div style="overflow-x:auto"><table class="hist"><thead>
-      <tr><th>発注番号</th><th>日付</th><th>発注先</th><th>内容</th><th>方法</th><th>状態</th><th>納期</th><th>発注書</th></tr>
+      <tr><th>発注番号</th><th>日付</th><th>発注先</th><th>内容</th><th>金額(税別)</th><th>方法</th><th>状態</th><th>納期</th><th>発注書</th></tr>
     </thead><tbody id="histRows"></tbody></table></div>
     <div id="histEmpty" class="empty" style="display:none">まだ発注履歴がありません</div>
   </section>
@@ -133,7 +145,7 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
     <button class="btn gh sm" style="margin:10px 0 24px" onclick="editVendor(null)">＋ 発注先を追加</button>
     <h2>定番品</h2>
     <div style="overflow-x:auto"><table class="hist"><thead>
-      <tr><th>発注先</th><th>品名</th><th>規格</th><th>いつもの数量</th><th>備考</th><th></th></tr>
+      <tr><th>発注先</th><th>品名</th><th>規格</th><th>いつもの数量</th><th>単価</th><th>備考</th><th></th></tr>
     </thead><tbody id="setItems"></tbody></table></div>
     <button class="btn gh sm" style="margin-top:10px" onclick="editItem(null)">＋ 定番品を追加</button>
   </section>
@@ -142,10 +154,11 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
 <!-- 送信確認 -->
 <div class="ovl" id="confOvl">
   <div class="dlg">
-    <h3>この内容で発注します。よろしいですか？</h3>
+    <h3>送信前のプレビュー</h3>
     <div class="confbox" id="confBox"></div>
-    <details style="margin-bottom:14px"><summary style="cursor:pointer;font-size:13px;color:var(--sub)">送信文面を確認する</summary>
-      <pre class="bodyprev" id="confBody"></pre></details>
+    <div class="costline" id="confCost"></div>
+    <p class="prevlabel" id="prevLabel"></p>
+    <div id="confPrev"></div>
     <div class="actions">
       <button class="btn pri" id="confSend" onclick="doSend()">送信する</button>
       <button class="btn gh" onclick="$('confOvl').classList.remove('show')">やめる</button>
@@ -183,6 +196,7 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
   <div class="formrow">
     <div><label class="fl">単位（枚・箱・袋…）</label><input class="tx" id="i_unit"></div>
     <div><label class="fl">いつもの数量</label><input class="tx" id="i_defQty" type="number"></div>
+    <div><label class="fl">単価(円)※社内表示のみ</label><input class="tx" id="i_price" type="number"></div>
   </div>
   <label class="fl">備考（色指定・最低ロット等＝発注書に載る）</label><input class="tx" id="i_note" style="margin-bottom:14px">
   <div class="actions">
@@ -332,24 +346,31 @@ function renderOrder(){
   if(CURMETH!=='mail'&&CURMETH!=='fax') CURMETH=v.method||'mail';
   const items=ITEMS.filter(i=>i.vendorId===v.id);
   const d=draftOf(v.id);
+  let total=0, hasNoPrice=false;
   const rows=items.map(it=>{
     const s=d.sel[it.id]||{};
+    const price=s.price??it.price??"";
+    const qty=s.qty??it.defQty??"";
+    const amt=(s.on&&+price>0&&+qty>0)?(+price)*(+qty):0;
+    if(s.on){ total+=amt; if(!(+price>0)) hasNoPrice=true; }
     return `<tr class="${s.on?'sel':''}">
       <td><input type="checkbox" class="ck" ${s.on?'checked':''} onchange="tglItem('${esc(it.id)}',this.checked)"></td>
       <td><span class="nm">${esc(it.name)}</span><br><span class="spec">${esc(it.spec||'')}</span></td>
-      <td><input type="number" class="qty" value="${esc(s.qty??it.defQty??'')}" min="0" onchange="setQty('${esc(it.id)}',this.value)" onfocus="autoOn('${esc(it.id)}')"> ${esc(it.unit||'')}</td>
-      <td><input class="rownote" placeholder="備考（色など）" value="${esc(s.note??it.note??'')}" onchange="setNote('${esc(it.id)}',this.value)"></td>
-      <td class="last">${esc(it.note||'')}</td>
+      <td style="white-space:nowrap"><input type="number" class="qty" value="${esc(qty)}" min="0" onchange="setQty('${esc(it.id)}',this.value)" onfocus="autoOn('${esc(it.id)}')"> ${esc(it.unit||'')}</td>
+      <td><input type="number" class="prc" value="${esc(price)}" min="0" onchange="setPrice('${esc(it.id)}',this.value)"></td>
+      <td class="amt">${amt?('¥'+amt.toLocaleString()):''}</td>
+      <td><input class="rownote" placeholder="備考（色など・相手に送られます）" value="${esc(s.note??it.note??'')}" onchange="setNote('${esc(it.id)}',this.value)"></td>
     </tr>`;
   }).join("");
+  const totalRow=`<tr class="totalrow"><td colspan="4" style="text-align:right;color:var(--sub);font-size:12.5px">合計（社内目安・税別／相手には送られません）</td><td class="amt" style="font-size:16px;color:var(--brand2)">¥${total.toLocaleString()}${hasNoPrice?'<span class="intnote">＋単価未設定分</span>':''}</td><td></td></tr>`;
   const vLast=ORDERS.filter(o=>o.vendorId===v.id).slice(0,3);
   const histHtml=vLast.length?('<div style="font-size:12px;color:var(--sub);margin-bottom:10px">直近: '+vLast.map(o=>fmtYMD(o.date)+'『'+esc(o.items)+'』').join('　／　')+'</div>'):'';
   el.innerHTML=`
     ${v.note?('<div style="font-size:12.5px;color:var(--warn);margin-bottom:8px">📌 '+esc(v.note)+'</div>'):''}
     ${histHtml}
-    <h2>2. 品目と数量を選ぶ</h2>
-    <table class="items"><thead><tr><th></th><th>品名・規格</th><th>数量</th><th>この発注の備考</th><th>いつもの備考</th></tr></thead>
-    <tbody>${rows||'<tr><td colspan="5" style="color:var(--sub)">定番品が未登録です（管理タブから追加）</td></tr>'}</tbody></table>
+    <h2>2. 品目と数量を選ぶ <span class="intnote">（単価・金額は社内表示のみ＝相手には送られません）</span></h2>
+    <table class="items"><thead><tr><th></th><th>品名・規格</th><th>数量</th><th>単価(円)</th><th>金額</th><th>この発注の備考</th></tr></thead>
+    <tbody>${rows||'<tr><td colspan="6" style="color:var(--sub)">定番品が未登録です（管理タブから追加）</td></tr>'}${rows?totalRow:''}</tbody></table>
     <h2>3. 送信方法・連絡事項</h2>
     <div class="formrow">
       <div style="flex:0 0 auto">
@@ -374,13 +395,14 @@ function tglItem(id,on){ const d=draftOf(CURV); d.sel[id]=d.sel[id]||{}; d.sel[i
 function autoOn(id){ const d=draftOf(CURV); if(!(d.sel[id]&&d.sel[id].on)){ tglItem(id,true); } }
 function setQty(id,vq){ const d=draftOf(CURV); d.sel[id]=d.sel[id]||{on:true}; d.sel[id].qty=vq; d.sel[id].on=true; saveDraft(); renderOrder(); }
 function setNote(id,vn){ const d=draftOf(CURV); d.sel[id]=d.sel[id]||{}; d.sel[id].note=vn; saveDraft(); }
+function setPrice(id,vp){ const d=draftOf(CURV); d.sel[id]=d.sel[id]||{}; d.sel[id].price=vp; saveDraft(); renderOrder(); }
 
 /* ===== 文面生成 ===== */
 function pickedItems(){
   const d=draftOf(CURV);
   return ITEMS.filter(i=>i.vendorId===CURV && d.sel[i.id] && d.sel[i.id].on).map(i=>{
     const s=d.sel[i.id];
-    return {id:i.id,name:i.name,spec:i.spec||"",unit:i.unit||"",qty:String(s.qty??i.defQty??""),note:(s.note??i.note??"")};
+    return {id:i.id,name:i.name,spec:i.spec||"",unit:i.unit||"",qty:String(s.qty??i.defQty??""),note:(s.note??i.note??""),price:String(s.price??i.price??"")};
   });
 }
 function buildSubject(v,items){
@@ -420,11 +442,30 @@ function openConf(){
   PENDING={vendorId:v.id,method:CURMETH,subject,body,note,items};
   $("confBox").innerHTML=
     `<b class="to">${esc(v.name)}</b>${v.contact?('　'+esc(v.contact)+' 様'):''}<br>`+
-    `${CURMETH==='fax'?('📠 FAX '+esc(v.fax)+'（発注書PDFを送信）'):('📧 メール '+esc(v.email))}<br>`+
-    items.map(it=>`<div class="itline">・${esc(it.name)}${it.spec?(' '+esc(it.spec)):''}　<b>${esc(it.qty)}${esc(it.unit)}</b>${it.note?('（'+esc(it.note)+'）'):''}</div>`).join("")+
-    (note?('<div style="margin-top:4px">連絡事項: '+esc(note)+'</div>'):'')+
-    `<div style="margin-top:6px;font-size:12.5px;color:var(--sub)">発注書PDFを自動作成してDriveに保存し、履歴に記録します</div>`;
-  $("confBody").textContent=(CURMETH==='mail'?('件名: '+subject+'\n\n'):'【FAX原稿=発注書PDF】参考文面:\n\n')+body;
+    `${CURMETH==='fax'?('📠 FAX '+esc(v.fax)+'（原稿=下の発注書PDF）'):('📧 メール '+esc(v.email))}<br>`+
+    `<div style="font-size:12.5px;color:var(--sub)">発注書PDFを自動作成してDriveに保存し、履歴に記録します</div>`;
+  // 社内合計（単価×数量。相手には送られない）
+  let total=0, noPrice=[];
+  items.forEach(it=>{ const p=+it.price,q=+it.qty; if(p>0&&q>0) total+=p*q; else noPrice.push(it.name); });
+  $("confCost").innerHTML=`💰 社内目安 合計 <b style="font-size:16px">¥${total.toLocaleString()}</b>（税別）`+
+    items.map(it=>{ const p=+it.price,q=+it.qty; return `<div style="font-size:12px;color:var(--sub)">・${esc(it.name)} ${p>0?('@'+p.toLocaleString()+'×'+q+'='+ (p*q).toLocaleString()+'円'):('@未設定×'+q)}</div>`; }).join("")+
+    `<div class="intnote">※単価・金額は相手には送られません</div>`;
+  if(CURMETH==='mail'){
+    $("prevLabel").textContent="📧 送信されるメール（このまま送られます）";
+    $("confPrev").innerHTML=`<pre class="bodyprev">${esc('件名: '+subject+'\n\n'+body)}</pre>`;
+  }else{
+    $("prevLabel").textContent="📠 送信される発注書PDFのイメージ（単価なし）";
+    $("confPrev").innerHTML=`<div class="faxprev">
+      <div style="text-align:right;font-size:11px;color:#555">発注日：${new Date().toLocaleDateString('ja-JP')}</div>
+      <h4>発　注　書</h4>
+      <div><b>${esc(v.name)}　御中</b>${v.contact?('　'+esc(v.contact)+' 様'):''}</div>
+      <div style="font-size:11px;color:#555">いつもお世話になっております。下記の通り発注いたしますので、ご手配のほどよろしくお願いいたします。</div>
+      <table><tr><th>No</th><th>品名・規格</th><th>数量</th><th>単位</th><th>備考</th></tr>
+      ${items.map((it,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${esc(it.name)}${it.spec?('<br><span style="font-size:10.5px;color:#555">'+esc(it.spec)+'</span>'):''}</td><td style="text-align:right;font-weight:bold">${esc(it.qty)}</td><td style="text-align:center">${esc(it.unit)}</td><td>${esc(it.note||'')}</td></tr>`).join('')}</table>
+      <div style="font-size:11px"><span style="color:#555">連絡事項：</span>${esc(note||'（なし）')}</div>
+      <div style="font-size:10.5px;color:#555;margin-top:6px">納品先：株式会社林材木店　静岡県磐田市福田5490-47　／　納期が決まりましたらご連絡ください。</div>
+    </div>`;
+  }
   $("confSend").disabled=false; $("confSend").textContent="送信する";
   $("confOvl").classList.add("show");
 }
@@ -455,6 +496,7 @@ function renderHist(){
     <td style="white-space:nowrap">${fmtYMD(o.date)}</td>
     <td>${esc(o.vendor)}</td>
     <td>${esc(o.items)}</td>
+    <td class="amt">${(+o.total>0)?('¥'+(+o.total).toLocaleString()):''}</td>
     <td>${o.method==='fax'?'📠FAX':'📧メール'}</td>
     <td><button class="st ${stCls(o.status)}" onclick="cycleStatus('${esc(o.id)}')">${esc(o.status||'発注済')}</button></td>
     <td><input type="date" value="${esc(o.deliveryDate||'')}" style="border:1px solid var(--line);border-radius:6px;padding:4px;font-size:12.5px" onchange="setDelivery('${esc(o.id)}',this.value)"></td>
@@ -484,7 +526,7 @@ function renderSet(){
   $("setItems").innerHTML=ITEMS.map(i=>{
     const v=VENDORS.find(x=>x.id===i.vendorId);
     return `<tr><td>${esc(v?v.name:i.vendorId)}</td><td><b>${esc(i.name)}</b></td><td>${esc(i.spec||'')}</td>
-    <td>${esc(i.defQty||'')}${esc(i.unit||'')}</td><td style="font-size:12px">${esc(i.note||'')}</td>
+    <td>${esc(i.defQty||'')}${esc(i.unit||'')}</td><td class="amt">${(+i.price>0)?('¥'+(+i.price).toLocaleString()):''}</td><td style="font-size:12px">${esc(i.note||'')}</td>
     <td><button class="btn gh sm" onclick="editItem('${esc(i.id)}')">編集</button></td></tr>`;
   }).join("");
 }
@@ -522,14 +564,15 @@ function editItem(id){
   if(!i&&CURV) $("i_vendor").value=CURV;
   $("i_name").value=i?i.name:""; $("i_spec").value=i?(i.spec||""):"";
   $("i_unit").value=i?(i.unit||""):""; $("i_defQty").value=i?(i.defQty||""):"";
-  $("i_note").value=i?(i.note||""):"";
+  $("i_price").value=i?(i.price||""):""; $("i_note").value=i?(i.note||""):"";
   $("i_del").style.display=i?"":"none";
   $("iOvl").classList.add("show");
 }
 async function saveItem(){
   const name=$("i_name").value.trim(); if(!name){ toast("品名は必須です"); return; }
   const b={action:"orderitem",id:$("i_id").value||undefined,vendorId:$("i_vendor").value,name,
-    spec:$("i_spec").value.trim(),unit:$("i_unit").value.trim(),defQty:$("i_defQty").value,note:$("i_note").value.trim()};
+    spec:$("i_spec").value.trim(),unit:$("i_unit").value.trim(),defQty:$("i_defQty").value,
+    price:$("i_price").value,note:$("i_note").value.trim()};
   try{ const j=await post(b); if(!j.ok){ toast("保存失敗: "+(j.error||"")); return; } }catch(e){ toast("保存失敗"); return; }
   $("iOvl").classList.remove("show"); toast("保存しました"); fetchAll();
 }
