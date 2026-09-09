@@ -177,7 +177,7 @@ table.stk input.th{width:72px;padding:6px;font-size:14px;border:1.5px solid var(
     </thead><tbody id="stkRows"><tr><td colspan="7" class="empty">読み込み中…</td></tr></tbody></table></div>
     <h2 style="margin-top:22px">使用ルール</h2>
     <div class="rulegrid" id="stkRules"></div>
-    <p class="stknote">段ボール＝束数×長さ別の枚数（在庫から引く束数は除く）／シール＝束数×1枚（等級ごと・B等級と等級未設定は対象外）</p>
+    <p class="stknote">段ボール＝束数×長さ別の枚数（在庫から引く束数は除く・300mmは0＝数えない）。<b>440幅は厚15×入数10の行だけ</b>、それ以外は380幅／シール＝束数×1枚（等級ごと・B等級と等級未設定は対象外）</p>
     <h2 style="margin-top:22px">履歴（最新80件）</h2>
     <div class="stklog" id="stkLog"></div>
     <div class="intnote" style="margin-top:8px">データは加工予定表と同じFirebase（settings/consumables）。減算はGAS csTick（毎時・6〜20時）。</div>
@@ -646,7 +646,7 @@ async function delItem(){
 
 /* ===== 消耗品在庫（Firebase kakou-yotei settings/consumables）===== */
 const STK_ROOT="settings/consumables";
-const STK_ORDER=["dan","seal_丸節","seal_小節","seal_特上小","seal_無節","seal_無節特上","seal_生節"];
+const STK_ORDER=["dan_380","dan_440","seal_丸節","seal_小節","seal_特上小","seal_無節","seal_無節特上","seal_生節"];
 const STK_DAN_LEN=["910","1820","2000","3000","4000","300"];
 let STK=null, stkDb=null, stkReady=false;
 function stkInit(){
