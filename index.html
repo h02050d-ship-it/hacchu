@@ -4,6 +4,8 @@
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="dns-prefetch" href="https://script.google.com">
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://kakou-yotei-default-rtdb.firebaseio.com" crossorigin>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>発注デスク｜林材木店</title>
@@ -92,6 +94,26 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
 .faxprev th{background:#eef2f6;border:1px solid #888;padding:4px 6px;font-size:11.5px;}
 .faxprev td{border:1px solid #888;padding:5px 6px;}
 .costline{background:var(--accent);border-radius:8px;padding:9px 13px;font-size:14px;margin-bottom:12px;}
+/* 消耗品在庫 */
+table.stk{width:100%;border-collapse:collapse;font-size:14px;}
+table.stk th{font-size:12px;color:var(--sub);text-align:left;padding:6px 8px;border-bottom:1.5px solid var(--line);white-space:nowrap;}
+table.stk td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap;}
+table.stk td.q{font-size:20px;font-weight:bold;text-align:right;}
+table.stk tr.low td{background:#fdf1ee;}
+table.stk tr.low td.q{color:var(--danger);}
+table.stk tr.na td.q{color:var(--sub);font-size:14px;font-weight:normal;}
+table.stk input.th{width:72px;padding:6px;font-size:14px;border:1.5px solid var(--line);border-radius:8px;text-align:right;}
+.stkbtn{border:1.5px solid var(--line);background:#fff;border-radius:8px;padding:6px 10px;font-size:12.5px;cursor:pointer;margin-right:4px;}
+.stkbtn.pri{border-color:var(--brand);color:var(--brand);font-weight:bold;}
+.rulegrid{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 14px;}
+.rulegrid label{font-size:12px;color:var(--sub);display:block;margin-bottom:3px;}
+.rulegrid input{width:70px;padding:6px;font-size:14px;border:1.5px solid var(--line);border-radius:8px;text-align:right;}
+.stknote{font-size:12.5px;color:var(--sub);line-height:1.7;margin:0 0 12px;}
+.stklog{font-size:12.5px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;}
+.stklog div{padding:5px 10px;border-bottom:1px solid var(--line);display:flex;gap:10px;}
+.stklog .d{color:var(--sub);white-space:nowrap;min-width:92px;}
+.stklog .neg{color:var(--danger);font-weight:bold;min-width:56px;text-align:right;}
+.stklog .pos{color:var(--ok);font-weight:bold;min-width:56px;text-align:right;}
 @media(max-width:640px){ .panel{padding:12px;} }
 #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#233;color:#fff;padding:11px 22px;border-radius:24px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:90vw;}
 #toast.show{opacity:1;transform:translateX(-50%);}
@@ -107,6 +129,9 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
   table.items .last{display:none;}
 }
 </style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js" defer></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js" defer></script>
 <script src="https://h02050d-ship-it.github.io/tool-portal/tu.js" defer></script>
 </head>
 <body>
@@ -120,6 +145,7 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
 <nav>
   <button id="tabOrder" class="on" onclick="showTab('order')">発注する</button>
   <button id="tabHist" onclick="showTab('hist')">発注履歴 <span id="histBadge"></span></button>
+  <button id="tabStock" onclick="showTab('stock')">消耗品在庫 <span id="stockBadge"></span></button>
   <button id="tabSet" onclick="showTab('set')">発注先・品目の管理</button>
 </nav>
 
@@ -138,6 +164,23 @@ pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;p
       <tr><th>発注番号</th><th>日付</th><th>発注先</th><th>内容</th><th>金額(税別)</th><th>方法</th><th>状態</th><th>納期</th><th>発注書</th></tr>
     </thead><tbody id="histRows"></tbody></table></div>
     <div id="histEmpty" class="empty" style="display:none">まだ発注履歴がありません</div>
+  </section>
+
+  <!-- 消耗品在庫 -->
+  <section id="pgStock" class="panel" style="display:none">
+    <h2>消耗品在庫（段ボール・等級シール）</h2>
+    <p class="stknote">加工予定表で「シル」「段ボ」に <b>有</b> が付いた行が<b>製造完了（製造順9）または出荷完了</b>になると、束数ぶん自動で減ります（毎時チェック）。
+      しきい値を下回ると <b>info@hayazai.com</b> に発注通知が届きます（同じ品は7日空けて再通知）。
+      「棚卸入力」に数えた数を入れた時点から減り始めます。未入力の品は使用量だけ記録します。</p>
+    <div style="overflow-x:auto"><table class="stk"><thead>
+      <tr><th>品目</th><th style="text-align:right">現在数</th><th>しきい値</th><th>直近30日の使用</th><th>目安</th><th>最終棚卸</th><th>操作</th></tr>
+    </thead><tbody id="stkRows"><tr><td colspan="7" class="empty">読み込み中…</td></tr></tbody></table></div>
+    <h2 style="margin-top:22px">使用ルール</h2>
+    <div class="rulegrid" id="stkRules"></div>
+    <p class="stknote">段ボール＝束数×長さ別の枚数（在庫から引く束数は除く）／シール＝束数×1枚（等級ごと・B等級と等級未設定は対象外）</p>
+    <h2 style="margin-top:22px">履歴（最新80件）</h2>
+    <div class="stklog" id="stkLog"></div>
+    <div class="intnote" style="margin-top:8px">データは加工予定表と同じFirebase（settings/consumables）。減算はGAS csTick（毎時・6〜20時）。</div>
   </section>
 
   <!-- 管理 -->
@@ -279,7 +322,13 @@ function submitGate(){
   $("gate").style.display="none";
   fetchAll();
 }
-document.addEventListener("DOMContentLoaded",()=>{ $("srcBadge").onclick=()=>{ if(confirm("ログアウトしますか？")){ clearCreds(); location.reload(); } }; boot(); });
+document.addEventListener("DOMContentLoaded",()=>{ $("srcBadge").onclick=()=>{ if(confirm("ログアウトしますか？")){ clearCreds(); location.reload(); } }; boot(); applyHash(); });
+let HASH_VENDOR=null;
+function applyHash(){
+  const h=decodeURIComponent(location.hash||"").replace(/^#/,"");
+  if(h==="stock"){ showTab("stock"); return; }
+  const m=h.match(/^vendor=(.+)$/); if(m){ HASH_VENDOR=m[1]; }
+}
 
 function setBadge(state){ const b=$("srcBadge"); if(state==="live"){ b.className=""; b.textContent="● ライブ"; } else if(state==="load"){ b.className=""; b.textContent="● 読込中…"; } else { b.className="err"; b.textContent="● オフライン"; } }
 
@@ -315,15 +364,18 @@ async function fetchAll(){
 /* ===== 描画 ===== */
 function renderAll(){ renderVtabs(); renderOrder(); renderHist(); renderSet(); }
 function showTab(t){
-  $("tabOrder").className=t==="order"?"on":""; $("tabHist").className=t==="hist"?"on":""; $("tabSet").className=t==="set"?"on":"";
+  $("tabOrder").className=t==="order"?"on":""; $("tabHist").className=t==="hist"?"on":""; $("tabSet").className=t==="set"?"on":""; $("tabStock").className=t==="stock"?"on":"";
   $("pgOrder").style.display=t==="order"?"":"none";
   $("pgHist").style.display=t==="hist"?"":"none";
   $("pgSet").style.display=t==="set"?"":"none";
+  $("pgStock").style.display=t==="stock"?"":"none";
+  if(t==="stock") stkInit();
 }
 
 function renderVtabs(){
   const el=$("vtabs");
   if(!VENDORS.length){ el.innerHTML=""; return; }
+  if(HASH_VENDOR){ const hv=VENDORS.find(v=>v.name===HASH_VENDOR||v.name.indexOf(HASH_VENDOR)>=0); if(hv){ CURV=hv.id; CURMETH=hv.method||'mail'; } HASH_VENDOR=null; }
   if(!CURV || !VENDORS.some(v=>v.id===CURV)) CURV=VENDORS[0].id;
   el.innerHTML=VENDORS.map(v=>{
     const last=ORDERS.find(o=>o.vendorId===v.id);
@@ -591,6 +643,71 @@ async function delItem(){
   try{ const j=await post({action:"orderitem",id,del:true}); if(!j.ok){ toast("削除失敗: "+(j.error||"")); return; } }catch(e){ toast("削除失敗"); return; }
   $("iOvl").classList.remove("show"); toast("削除しました"); fetchAll();
 }
+
+/* ===== 消耗品在庫（Firebase kakou-yotei settings/consumables）===== */
+const STK_ROOT="settings/consumables";
+const STK_ORDER=["dan","seal_丸節","seal_小節","seal_特上小","seal_無節","seal_無節特上","seal_生節"];
+const STK_DAN_LEN=["910","1820","2000","3000","4000","300"];
+let STK=null, stkDb=null, stkReady=false;
+function stkInit(){
+  if(stkReady) return; stkReady=true;
+  if(typeof firebase==="undefined"){ $("stkRows").innerHTML='<tr><td colspan="7" class="empty">Firebaseの読み込みに失敗しました（再読み込みしてください）</td></tr>'; stkReady=false; return; }
+  try{
+    if(!firebase.apps.length) firebase.initializeApp({apiKey:"AIzaSyBkpsxdYciMiLmsBfHNWRL7OFniSsssQwA",databaseURL:"https://kakou-yotei-default-rtdb.firebaseio.com",projectId:"kakou-yotei"});
+    stkDb=firebase.database();
+    firebase.auth().signInAnonymously().then(()=>{
+      stkDb.ref(STK_ROOT).on("value",snap=>{ STK=snap.val()||{}; renderStock(); },err=>{ $("stkRows").innerHTML='<tr><td colspan="7" class="empty">読み込みエラー: '+esc(err.message||err)+'</td></tr>'; });
+    }).catch(e=>{ $("stkRows").innerHTML='<tr><td colspan="7" class="empty">認証エラー: '+esc(e.message||e)+'</td></tr>'; stkReady=false; });
+  }catch(e){ $("stkRows").innerHTML='<tr><td colspan="7" class="empty">初期化エラー: '+esc(e.message||e)+'</td></tr>'; stkReady=false; }
+}
+function stkNowIso(){ const d=new Date(); const z=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+z(d.getMonth()+1)+"-"+z(d.getDate())+"T"+z(d.getHours())+":"+z(d.getMinutes())+":"+z(d.getSeconds()); }
+function stkUse30(id){ const log=(STK&&STK.log)||{}; const since=Date.now()-30*86400000; let sum=0; for(const k in log){ const l=log[k]; if(l&&l.item===id&&l.type==="use"&&new Date(l.at).getTime()>=since) sum+=-Number(l.delta||0); } return Math.round(sum*10)/10; }
+function stkFmt(n){ return (n==null||isNaN(n))?"":(Math.round(n*100)/100).toLocaleString(); }
+function renderStock(){
+  if(!STK) return;
+  const stock=STK.stock||{}; const ord=id=>{ const i=STK_ORDER.indexOf(id); return i<0?99:i; };
+  const ids=Object.keys(stock).sort((a,b)=>ord(a)-ord(b));
+  let low=0;
+  $("stkRows").innerHTML=ids.map(id=>{
+    const s=stock[id]||{}; const has=typeof s.qty==="number"; const th=Number(s.threshold)||0; const u30=stkUse30(id);
+    const isLow=has&&th>0&&s.qty<=th; if(isLow) low++;
+    const days=(has&&u30>0)?Math.floor(s.qty/(u30/30)):null;
+    return `<tr class="${isLow?'low':''} ${has?'':'na'}">
+      <td><b>${esc(s.name||id)}</b>${s.vendor?('<div class="intnote">発注先: '+esc(s.vendor)+'</div>'):''}</td>
+      <td class="q">${has?(stkFmt(s.qty)+'<span style="font-size:12px;font-weight:normal;color:var(--sub)"> '+esc(s.unit||'')+'</span>'):'未棚卸'}</td>
+      <td><input type="number" class="th" value="${esc(th||'')}" min="0" onchange="stkSetTh('${esc(id)}',this.value)"> ${esc(s.unit||'')}</td>
+      <td>${stkFmt(u30)}${esc(s.unit||'')}</td>
+      <td style="font-size:12.5px;color:${days!=null&&days<14?'var(--danger)':'var(--sub)'}">${days!=null?('あと約'+days+'日'):(has?'（使用実績待ち）':'')}</td>
+      <td style="font-size:12px;color:var(--sub)">${s.counted_at?esc(String(s.counted_at).slice(0,10).replace(/-/g,'/')):'—'}</td>
+      <td><button class="stkbtn pri" onclick="stkCount('${esc(id)}')">棚卸入力</button><button class="stkbtn" onclick="stkIn('${esc(id)}')">入荷＋</button><button class="stkbtn" onclick="stkAdj('${esc(id)}')">調整</button></td>
+    </tr>`;
+  }).join("")||'<tr><td colspan="7" class="empty">品目がありません（GASの初回実行で作られます）</td></tr>';
+  $("stockBadge").textContent=low?('('+low+')'):'';
+  const r=STK.rules||{}; const dan=r.dan||{};
+  const lenLabel=L=>(L==='910'||L==='300')?L:((Number(L)/1000)+'m');
+  $("stkRules").innerHTML=STK_DAN_LEN.map(L=>`<div><label>段ボール ${lenLabel(L)}</label><input type="number" step="0.5" min="0" value="${esc(dan[L]!=null?dan[L]:'')}" onchange="stkSetRule('dan/${L}',this.value)"></div>`).join("")
+    +`<div><label>シール 1束あたり</label><input type="number" step="1" min="0" value="${esc(r.seal_per_bundle!=null?r.seal_per_bundle:1)}" onchange="stkSetRule('seal_per_bundle',this.value)"></div>`;
+  const log=STK.log||{}; const keys=Object.keys(log).sort().reverse().slice(0,80);
+  const nameOf=id=>(stock[id]&&stock[id].name)||id;
+  $("stkLog").innerHTML=keys.map(k=>{ const l=log[k]||{}; const d=Number(l.delta||0);
+    const what=l.type==='use'?(esc(l.customer||'')+' '+esc(l.grade||'')+' '+esc(l.length||'')+(l.bundles?(' '+l.bundles+'束'):'')):esc(l.note||'');
+    return `<div><span class="d">${esc(String(l.at||'').slice(5,16).replace('T',' '))}</span><span style="min-width:110px">${esc(nameOf(l.item))}</span><span class="${d<0?'neg':'pos'}">${d>0?'+':''}${stkFmt(d)}</span><span style="color:var(--sub)">${what}${l.after!=null?('　→ 残'+stkFmt(l.after)):''}${l.by?('　'+esc(l.by)):''}</span></div>`; }).join("")||'<div style="color:var(--sub)">まだ履歴がありません</div>';
+}
+function stkWho(){ const c=creds(); return (c.email||'').split('@')[0]||'web'; }
+async function stkWrite(id,type,newQty,delta,note){
+  const s=(STK.stock||{})[id]||{}; const now=stkNowIso(); const key=String(Date.now())+"_w";
+  const upd={}; upd[STK_ROOT+"/stock/"+id+"/qty"]=newQty; upd[STK_ROOT+"/stock/"+id+"/updated_at"]=now; upd[STK_ROOT+"/stock/"+id+"/updated_by"]=stkWho();
+  if(type==="count") upd[STK_ROOT+"/stock/"+id+"/counted_at"]=now;
+  upd[STK_ROOT+"/log/"+key]={at:now,type,item:id,delta,after:newQty,note,by:stkWho()};
+  if(typeof newQty==="number"&&(Number(s.threshold)||0)>0&&newQty>Number(s.threshold)) upd[STK_ROOT+"/alert/"+id]=null;
+  try{ await stkDb.ref().update(upd); toast("保存しました: "+(s.name||id)+" → "+stkFmt(newQty)); }catch(e){ toast("保存失敗: "+(e.message||e)); }
+}
+function stkCount(id){ const s=(STK.stock||{})[id]||{}; const v=prompt((s.name||id)+" の数えた数（"+(s.unit||'枚')+"）を入力", typeof s.qty==="number"?String(s.qty):""); if(v==null) return; const n=Number(v); if(isNaN(n)||n<0){ toast("数字を入れてください"); return; } const old=typeof s.qty==="number"?s.qty:null; stkWrite(id,"count",n,old==null?n:n-old,old==null?"棚卸（初回）":"棚卸"); }
+function stkIn(id){ const s=(STK.stock||{})[id]||{}; if(typeof s.qty!=="number"){ toast("先に棚卸入力してください"); return; } const v=prompt((s.name||id)+" の入荷数（"+(s.unit||'枚')+"）を入力",""); if(v==null) return; const n=Number(v); if(isNaN(n)||n<=0){ toast("1以上の数字を入れてください"); return; } stkWrite(id,"in",Math.round((s.qty+n)*100)/100,n,"入荷"); }
+function stkAdj(id){ const s=(STK.stock||{})[id]||{}; if(typeof s.qty!=="number"){ toast("先に棚卸入力してください"); return; } const v=prompt((s.name||id)+" の増減（例: -5 や 12）",""); if(v==null) return; const n=Number(v); if(isNaN(n)||n===0){ toast("数字を入れてください"); return; } const note=prompt("理由（省略可）","")||"調整"; stkWrite(id,"adj",Math.round((s.qty+n)*100)/100,n,note); }
+async function stkSetTh(id,v){ const n=Number(v); if(isNaN(n)||n<0) return; try{ await stkDb.ref(STK_ROOT+"/stock/"+id+"/threshold").set(n); toast("しきい値を保存しました"); }catch(e){ toast("保存失敗: "+(e.message||e)); } }
+async function stkSetRule(path,v){ const n=Number(v); if(isNaN(n)||n<0) return; try{ await stkDb.ref(STK_ROOT+"/rules/"+path).set(n); toast("ルールを保存しました（次の製造完了分から適用）"); }catch(e){ toast("保存失敗: "+(e.message||e)); } }
+
 </script>
 </body>
 </html>
