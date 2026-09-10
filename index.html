@@ -526,7 +526,7 @@ function openConf(){
     `<div id="confDup" style="display:none;margin-top:6px"></div>`+
     (operator()?'':`<div style="margin-top:6px;font-size:12.5px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px">🖥 このPCの使用者が未設定です。発注した人を選んでください: <select class="op-sel"></select></div>`);
   renderOpSel();
-  dupCheck($("confDup"),{partner:v.name,fax:v.fax||'',email:v.email||''},creds()||{});
+  dupCheck($("confDup"),{partner:v.name,fax:v.fax||'',mail:v.email||''},creds()||{});
   // 社内合計（単価×数量。相手には送られない）
   let total=0, noPrice=[];
   items.forEach(it=>{ const p=+it.price,q=+it.qty; if(p>0&&q>0) total+=p*q; else noPrice.push(it.name); });
