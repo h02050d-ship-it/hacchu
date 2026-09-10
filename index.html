@@ -139,6 +139,7 @@ table.stk input.th{width:72px;padding:6px;font-size:14px;border:1.5px solid var(
   <h1>📦 発注デスク</h1>
   <div class="sp"></div>
   <div class="links"><a id="folderLink" target="_blank" style="display:none">📁発注書</a><a id="sheetLink" target="_blank" style="display:none">📊DB</a></div>
+  <select class="op-sel" id="op-sel" style="font-size:12px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px" title="このPCから出す発注に「誰が発注したか」を記録します（やりとりログ）"></select>
   <div id="srcBadge">● 読込中…</div>
 </header>
 
@@ -266,6 +267,31 @@ table.stk input.th{width:72px;padding:6px;font-size:14px;border:1.5px solid var(
 const API = 'https://script.google.com/macros/s/AKfycbxQCf2HVfLjUAzOYXJHzzhquN3zkNrUAgcusg3mH5uhlm-UySsDYXBChhLjZGI2DyecIg/exec';
 const CRED_KEY = 'hacchu_cred';
 const CACHE_KEY = 'hacchu_cache_v1';
+const RL_API=API;
+/* ==== このPCの使用者（やりとりログ共通。localStorage hayazai_operator / hayazai_staff） ==== */
+const OP_KEY='hayazai_operator', STAFF_KEY='hayazai_staff', STAFF_DEFAULT=['大樹','潤也','楓','智恵子','その他'];
+function operator(){ try{ const v=JSON.parse(localStorage.getItem(OP_KEY)||'null'); return (v&&v.name)||''; }catch(e){ return ''; } }
+function setOperator(name){ try{ localStorage.setItem(OP_KEY,JSON.stringify({name,setAt:Date.now()})); }catch(e){} renderOpSel(); }
+function staffList(){ try{ const s=JSON.parse(localStorage.getItem(STAFF_KEY)||'null'); if(s&&s.length) return s; }catch(e){} return STAFF_DEFAULT; }
+function renderOpSel(){ document.querySelectorAll('select.op-sel').forEach(sel=>{ const cur=operator(); sel.innerHTML=['<option value="">🖥 使用者:未設定</option>'].concat(staffList().map(s=>`<option value="${s}"${s===cur?' selected':''}>🖥 使用者: ${s}</option>`)).join(''); sel.style.background=cur?'#d1fae5':'#fef3c7'; }); }
+document.addEventListener('change',e=>{ if(e.target.classList&&e.target.classList.contains('op-sel')){ setOperator(e.target.value); } });
+document.addEventListener('DOMContentLoaded',renderOpSel);
+// 送信前の重複チェック（やりとりログ rl_recent）。el に結果を描く
+async function dupCheck(el, q, cred){
+  el.innerHTML='<span style="color:#6b7280;font-size:12px">🔎 最近のやりとりを確認中…</span>'; el.style.display='';
+  try{
+    const u=RL_API+'?'+new URLSearchParams(Object.assign({action:'rl_recent',days:'7',email:cred.email,pass:cred.pass},q)).toString();
+    const d=await (await fetch(u)).json();
+    if(!d||!d.ok){ el.style.display='none'; return; }
+    const hits=(d.hits||[]).slice(0,5);
+    if(!hits.length){ el.innerHTML='<span style="color:#047857;font-size:12px">✅ 7日以内にこの取引先への送信はありません</span>'; return; }
+    const f=iso=>{ const t=new Date(iso); return (t.getMonth()+1)+'/'+t.getDate()+' '+String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'); };
+    el.innerHTML='<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:6px 10px;font-size:12.5px;color:#991b1b"><b>⚠ 7日以内にこの取引先へ送信済みです（'+(d.hits||[]).length+'件）。同じ用件の重複ではないか確認してください</b>'
+      + hits.map(h=>'<div>・'+f(h.ts)+' '+h.channel+' <b>'+(h.who||'担当不明')+'</b>「'+String(h.subject||'（件名なし）').replace(/[<>]/g,'')+'」</div>').join('')
+      + '<div style="margin-top:3px"><a href="https://h02050d-ship-it.github.io/renraku-log/" target="_blank" rel="noopener">やりとりログを開く</a></div></div>';
+  }catch(e){ el.style.display='none'; }
+}
+
 const DRAFT_KEY = 'hacchu_draft_v1';
 
 /* ===== 資格情報（共通SSO: h02050d-ship-it.github.io の他ツールのログインを引き継ぐ）===== */
@@ -492,11 +518,15 @@ function openConf(){
   const note=$("ordNote")?$("ordNote").value.trim():"";
   const subject=buildSubject(v,items);
   const body=buildBody(v,items,note);
-  PENDING={vendorId:v.id,method:CURMETH,subject,body,note,items};
+  PENDING={vendorId:v.id,method:CURMETH,subject,body,note,items,by:operator()};
   $("confBox").innerHTML=
     `<b class="to">${esc(v.name)}</b>${v.contact?('　'+esc(v.contact)+' 様'):''}<br>`+
     `${CURMETH==='fax'?('📠 FAX '+esc(v.fax)+'（原稿=下の発注書PDF）'):('📧 メール '+esc(v.email))}<br>`+
-    `<div style="font-size:12.5px;color:var(--sub)">発注書PDFを自動作成してDriveに保存し、履歴に記録します</div>`;
+    `<div style="font-size:12.5px;color:var(--sub)">発注書PDFを自動作成してDriveに保存し、履歴に記録します</div>`+
+    `<div id="confDup" style="display:none;margin-top:6px"></div>`+
+    (operator()?'':`<div style="margin-top:6px;font-size:12.5px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px">🖥 このPCの使用者が未設定です。発注した人を選んでください: <select class="op-sel"></select></div>`);
+  renderOpSel();
+  dupCheck($("confDup"),{partner:v.name,fax:v.fax||'',email:v.email||''},creds()||{});
   // 社内合計（単価×数量。相手には送られない）
   let total=0, noPrice=[];
   items.forEach(it=>{ const p=+it.price,q=+it.qty; if(p>0&&q>0) total+=p*q; else noPrice.push(it.name); });
