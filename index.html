@@ -208,6 +208,7 @@ table.stk input.th{width:72px;padding:6px;font-size:14px;border:1.5px solid var(
     <div id="confPrev"></div>
     <div class="actions">
       <button class="btn pri" id="confSend" onclick="doSend()">送信する</button>
+      <button class="btn" id="confPdf" onclick="openRealPdf()" title="送信せずに、実際に送られる発注書PDFを別タブで開きます">📄 実際のPDFを見る</button>
       <button class="btn gh" onclick="$('confOvl').classList.remove('show')">やめる</button>
     </div>
   </div>
@@ -553,6 +554,19 @@ function openConf(){
   }
   $("confSend").disabled=false; $("confSend").textContent="送信する";
   $("confOvl").classList.add("show");
+}
+// 送信せずに実物の発注書PDFを開く（GAS orderpreview・保存も履歴記録もしない）
+async function openRealPdf(){
+  if(!PENDING) return;
+  const btn=$("confPdf"); btn.disabled=true; btn.textContent="PDF作成中…";
+  const w=window.open("about:blank","_blank");
+  let j=null;
+  try{ j=await post({action:"orderpreview",...PENDING}); }catch(e){ j={ok:false,error:String(e)}; }
+  btn.disabled=false; btn.textContent="📄 実際のPDFを見る";
+  if(!j||!j.ok||!j.b64){ if(w) w.close(); toast("PDF作成失敗: "+((j&&j.error)||"不明")); return; }
+  const bin=atob(j.b64), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  const url=URL.createObjectURL(new Blob([u8],{type:"application/pdf"}));
+  if(w) w.location.href=url; else window.open(url,"_blank");
 }
 async function doSend(){
   if(!PENDING) return;
