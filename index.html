@@ -86,6 +86,8 @@ table.hist td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top
 .confbox{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;font-size:14px;line-height:1.9;}
 .confbox b.to{font-size:15.5px;}
 .confbox .itline{padding-left:1em;}
+input.subjedit{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;margin:0 0 8px;}
+textarea.bodyedit{width:100%;box-sizing:border-box;background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;font-family:inherit;line-height:1.6;height:300px;resize:vertical;margin:0 0 12px;}
 pre.bodyprev{background:#f7f9f8;border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px;white-space:pre-wrap;font-family:inherit;max-height:300px;overflow:auto;margin:0 0 12px;}
 .prevlabel{font-size:12px;color:var(--sub);margin:0 0 4px;}
 .faxprev{border:1px solid var(--line);border-radius:8px;padding:14px;background:#fff;font-size:12.5px;max-height:300px;overflow:auto;margin-bottom:12px;}
@@ -488,9 +490,10 @@ function pickedItems(){
   });
 }
 function buildSubject(v,items){
-  const tpl=v.subjectTpl||'【要返信】{品名} 発注の件';
+  // 発注メールに【要返信】は付けない（2026-10-14 本人指示・シートの旧テンプレに残っていても外す）
+  const tpl=String(v.subjectTpl||'{品名} 発注の件').replace(/【要返信】\s*/g,'');
   const nm=items.length?items[0].name+(items.length>1?' ほか':''):'';
-  return tpl.replace('{品名}',nm);
+  return tpl.replace('{品名}',nm).trim();
 }
 function buildBody(v,items,note){
   const lines=[];
@@ -508,8 +511,13 @@ function buildBody(v,items,note){
   if(note){ lines.push(''); lines.push('■連絡事項'); lines.push(note); }
   lines.push('');
   lines.push(v.closing||'手配のほどよろしくお願いいたします。');
+  lines.push('');
+  lines.push(SIGNATURE);
   return lines.join('\n');
 }
+
+// API送信にはGmailの自動署名が付かないので本文末尾に会社署名を入れる（2026-10-14）
+const SIGNATURE=['************************************************','株式会社林材木店','林　大樹','TEL：0538-58-2395','MAIL：info@hayazai.com','HP：https://hayazai.com'].join('\n');
 
 /* ===== 確認→送信 ===== */
 let PENDING=null;
@@ -537,8 +545,9 @@ function openConf(){
     items.map(it=>{ const p=+it.price,q=+it.qty; return `<div style="font-size:12px;color:var(--sub)">・${esc(it.name)} ${p>0?('@'+p.toLocaleString()+'×'+q+'='+ (p*q).toLocaleString()+'円'):('@未設定×'+q)}</div>`; }).join("")+
     `<div class="intnote">※単価・金額は相手には送られません</div>`;
   if(CURMETH==='mail'){
-    $("prevLabel").textContent="📧 送信されるメール（このまま送られます）";
-    $("confPrev").innerHTML=`<pre class="bodyprev">${esc('件名: '+subject+'\n\n'+body)}</pre>`;
+    $("prevLabel").textContent="📧 送信されるメール（ここで直接編集できます）";
+    $("confPrev").innerHTML=`<input class="subjedit" id="confSubj" value="${esc(subject)}" placeholder="件名">`+
+      `<textarea class="bodyedit" id="confBody">${esc(body)}</textarea>`;
   }else{
     $("prevLabel").textContent="📠 送信される発注書PDFのイメージ（単価なし）";
     $("confPrev").innerHTML=`<div class="faxprev">
@@ -556,6 +565,13 @@ function openConf(){
   $("confOvl").classList.add("show");
 }
 // 送信せずに実物の発注書PDFを開く（GAS orderpreview・保存も履歴記録もしない）
+// 確認画面で編集した件名・本文をPENDINGへ反映
+function syncEdits(){
+  const s=$("confSubj"), b=$("confBody");
+  if(s){ PENDING.subject=s.value.trim(); if(!PENDING.subject){ toast("件名が空です"); return false; } }
+  if(b){ PENDING.body=b.value; if(!PENDING.body.trim()){ toast("本文が空です"); return false; } }
+  return true;
+}
 async function openRealPdf(){
   if(!PENDING) return;
   const btn=$("confPdf"); btn.disabled=true; btn.textContent="PDF作成中…";
@@ -570,6 +586,7 @@ async function openRealPdf(){
 }
 async function doSend(){
   if(!PENDING) return;
+  if(!syncEdits()) return;
   $("confSend").disabled=true; $("confSend").textContent="送信中…";
   let j=null;
   try{ j=await post({action:"ordersend",...PENDING}); }catch(e){ j={ok:false,error:String(e)}; }
